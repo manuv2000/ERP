@@ -4,3 +4,5 @@ require_relative 'product_test'
 require_relative 'purchase_order_line_test'
 require_relative 'purchase_order_test'
 require_relative 'purchase_order_receiving_test'
+require_relative "sqlite_product_repository_test"
+require_relative "sqlite_purchase_order_repository_test"

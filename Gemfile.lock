@@ -57,19 +57,20 @@ GEM
       parser (>= 3.3.7.2)
       prism (~> 1.7)
     ruby-progressbar (1.13.0)
+    sqlite3 (2.10.0-x86_64-linux-gnu)
     tsort (0.2.0)
     unicode-display_width (3.3.0)
       unicode-emoji (~> 4.3)
     unicode-emoji (4.3.0)
 
 PLATFORMS
-  ruby
   x86_64-linux
 
 DEPENDENCIES
   debug
   minitest
   rubocop
+  sqlite3 (~> 2.0)
 
 BUNDLED WITH
    2.6.9
