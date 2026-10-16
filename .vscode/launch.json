@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "ruby_lsp",
+      "name": "Debug current Ruby file",
+      "request": "launch",
+      "program": "bundle exec ruby ${file}"
+    }
+  ]
+}

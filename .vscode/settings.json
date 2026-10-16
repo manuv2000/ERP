@@ -1,0 +1,11 @@
+{
+  "rubyLsp.rubyVersionManager": {
+    "identifier": "mise"
+  },
+  "[ruby]": {
+    "editor.defaultFormatter": "Shopify.ruby-lsp",
+    "editor.formatOnSave": false,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  }
+}

@@ -1,0 +1,20 @@
+# Ruby LSP-generated environment
+/.ruby-lsp/
+
+# Machine-specific Bundler configuration and installed dependencies
+/.bundle/
+/vendor/bundle/
+
+# Local databases and their auxiliary files
+/db/*.sqlite3
+/db/*.sqlite3-*
+
+# Generated output
+/log/
+/tmp/
+/coverage/
+
+# Local environment variables
+/.env
+/.env.*
+!/.env.example

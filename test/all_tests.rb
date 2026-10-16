@@ -1,0 +1,6 @@
+# frozen_string_literal: true
+
+require_relative 'product_test'
+require_relative 'purchase_order_line_test'
+require_relative 'purchase_order_test'
+require_relative 'purchase_order_receiving_test'
