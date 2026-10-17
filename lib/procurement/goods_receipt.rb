@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require_relative "errors"
 
 module Procurement
   class GoodsReceipt
@@ -11,16 +12,16 @@ module Procurement
         :purchase_order_id
       )
 
-      raise ArgumentError, 'lines must be a non-empty Array' unless lines.is_a?(Array) && !lines.empty?
+      raise ValidationError, 'lines must be a non-empty Array' unless lines.is_a?(Array) && !lines.empty?
 
       unless lines.all? { |line| line.is_a?(GoodsReceiptLine) }
-        raise ArgumentError, 'every line must be a GoodsReceiptLine'
+        raise ValidationError, 'every line must be a GoodsReceiptLine'
       end
 
       order_line_ids = lines.map(&:purchase_order_line_id)
 
       unless order_line_ids.uniq.size == order_line_ids.size
-        raise ArgumentError, 'an order line cannot repeat within a receipt'
+        raise ValidationError, 'an order line cannot repeat within a receipt'
       end
 
       @lines = lines.dup.freeze
@@ -31,11 +32,11 @@ module Procurement
     private
 
     def validated_text(value, field)
-      raise ArgumentError, "#{field} must be a String" unless value.is_a?(String)
+      raise ValidationError, "#{field} must be a String" unless value.is_a?(String)
 
       normalized = value.strip
 
-      raise ArgumentError, "#{field} must not be blank" if normalized.empty?
+      raise ValidationError, "#{field} must not be blank" if normalized.empty?
 
       normalized.freeze
     end

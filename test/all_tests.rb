@@ -6,3 +6,7 @@ require_relative 'purchase_order_test'
 require_relative 'purchase_order_receiving_test'
 require_relative "sqlite_product_repository_test"
 require_relative "sqlite_purchase_order_repository_test"
+require_relative "graphql_product_query_test"
+require_relative "graphql_purchase_order_query_test"
+require_relative "graphql_confirm_purchase_order_test.rb"
+require_relative "graphql_record_goods_receipt_test"

@@ -173,5 +173,10 @@ if $PROGRAM_NAME == __FILE__
   rescue SQLite3::BusyException
     warn "Database is busy. Try the command again shortly."
     exit 1
+  rescue ArgumentError,
+    Procurement::PurchaseOrder::InvalidStateError,
+    Procurement::OrderNotFoundError => error
+    warn "Error: #{error.message}"
+    exit 1
   end
 end

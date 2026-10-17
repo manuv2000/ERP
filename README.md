@@ -64,3 +64,28 @@ See [Database design and persistence](docs/database-design.md) for the
 schema, constraints, operation sequences, and current limitations.
 
 Run all tests with `bundle exec ruby -Itest test/all_tests.rb`.
+
+## GraphQL API
+
+The GraphQL schema currently executes directly from Ruby, without an
+HTTP server.
+
+Supported operations:
+
+- Query a product by ID.
+- Query a purchase order with its lines and receiving quantities.
+- Confirm a stored draft order.
+- Record a goods receipt containing one or more lines.
+
+Mutations return the updated order and an empty `errors` list on success.
+Expected business rejections return a null order and error messages.
+Unexpected exceptions are not converted into business-error payloads.
+
+Run the query demonstrations:
+
+    bundle exec ruby graphql_demo.rb product-001
+    bundle exec ruby graphql_order_demo.rb ORDER_ID
+
+Order reconstruction uses a read transaction, or reuses the transaction
+of the operation calling it. Separate root lookups do not share a
+request-wide database snapshot.

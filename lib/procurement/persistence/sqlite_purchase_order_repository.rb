@@ -47,6 +47,77 @@ module Procurement
       end
 
       def find(id)
+        return load_order(id) if @database.transaction_active?
+
+        order = nil
+
+        @database.transaction do
+          order = load_order(id)
+        end
+
+        order
+      end
+
+      def record_receipt(order_id, receipt)
+        updated_order = nil
+
+        @database.transaction(:immediate) do
+          updated_order = find(order_id)
+
+          unless updated_order
+            raise OrderNotFoundError, "order does not exist"
+          end
+
+          updated_order.record_receipt(receipt)
+
+          @database.execute(
+            "INSERT INTO goods_receipts (purchase_order_id, id)
+            VALUES (?, ?)",
+            [updated_order.id, receipt.id]
+          )
+
+          receipt.lines.each_with_index do |line, position|
+            @database.execute(
+              "INSERT INTO goods_receipt_lines
+                (purchase_order_id, receipt_id, purchase_order_line_id,
+                  received_quantity, position)
+              VALUES (?, ?, ?, ?, ?)",
+              [
+                updated_order.id,
+                receipt.id,
+                line.purchase_order_line_id,
+                line.received_quantity,
+                position
+              ]
+            )
+          end
+        end
+
+        updated_order
+      end
+      
+      def confirm(order_id)
+        order = nil
+
+        @database.transaction(:immediate) do
+          order = find(order_id)
+
+          raise OrderNotFoundError, "order does not exist" unless order
+
+          order.confirm!
+
+          @database.execute(
+            "UPDATE purchase_orders SET status = ? WHERE id = ?",
+            [order.status.to_s, order.id]
+          )
+        end
+
+        order
+      end
+
+      private
+
+      def load_order(id)
         row = @database.get_first_row(
           "SELECT id, supplier_id, status
            FROM purchase_orders WHERE id = ?",
@@ -89,65 +160,6 @@ module Procurement
         load_receipts_into(order)
         order
       end
-
-      def record_receipt(order_id, receipt)
-        updated_order = nil
-
-        @database.transaction(:immediate) do
-          updated_order = find(order_id)
-
-          unless updated_order
-            raise ArgumentError, "order does not exist"
-          end
-
-          updated_order.record_receipt(receipt)
-
-          @database.execute(
-            "INSERT INTO goods_receipts (purchase_order_id, id)
-            VALUES (?, ?)",
-            [updated_order.id, receipt.id]
-          )
-
-          receipt.lines.each_with_index do |line, position|
-            @database.execute(
-              "INSERT INTO goods_receipt_lines
-                (purchase_order_id, receipt_id, purchase_order_line_id,
-                  received_quantity, position)
-              VALUES (?, ?, ?, ?, ?)",
-              [
-                updated_order.id,
-                receipt.id,
-                line.purchase_order_line_id,
-                line.received_quantity,
-                position
-              ]
-            )
-          end
-        end
-
-        updated_order
-      end
-      
-      def confirm(order_id)
-        order = nil
-
-        @database.transaction(:immediate) do
-          order = find(order_id)
-
-          raise ArgumentError, "order does not exist" unless order
-
-          order.confirm!
-
-          @database.execute(
-            "UPDATE purchase_orders SET status = ? WHERE id = ?",
-            [order.status.to_s, order.id]
-          )
-        end
-
-        order
-      end
-      
-      private
 
       def load_receipts_into(order)
         receipt_rows = @database.execute(

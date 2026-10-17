@@ -2,11 +2,17 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.3)
+    base64 (0.3.0)
     debug (1.11.1)
       irb (~> 1.10)
       reline (>= 0.3.8)
     drb (2.2.3)
     erb (6.0.7)
+    fiber-storage (1.0.1)
+    graphql (2.6.12)
+      base64
+      fiber-storage
+      logger
     io-console (0.9.4)
     irb (1.18.0)
       pp (>= 0.6.0)
@@ -68,6 +74,7 @@ PLATFORMS
 
 DEPENDENCIES
   debug
+  graphql (~> 2.0)
   minitest
   rubocop
   sqlite3 (~> 2.0)

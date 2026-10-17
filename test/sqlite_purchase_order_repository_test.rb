@@ -214,7 +214,7 @@ class SQLitePurchaseOrderRepositoryTest < Minitest::Test
   end
 
   def test_cannot_confirm_a_missing_order
-    assert_raises(ArgumentError) do
+    assert_raises(Procurement::OrderNotFoundError) do
       @orders.confirm("missing-order")
     end
   end

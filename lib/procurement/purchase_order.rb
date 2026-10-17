@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require_relative "errors"
 
 module Procurement
   class PurchaseOrder
@@ -21,16 +22,16 @@ module Procurement
     def add_line(line)
       ensure_draft!
 
-      raise ArgumentError, 'line must be a PurchaseOrderLine' unless line.is_a?(PurchaseOrderLine)
+      raise ValidationError, 'line must be a PurchaseOrderLine' unless line.is_a?(PurchaseOrderLine)
 
-      raise ArgumentError, 'line id already exists in this order' if @lines_by_id.key?(line.id)
+      raise ValidationError, 'line id already exists in this order' if @lines_by_id.key?(line.id)
 
       duplicate_product = @lines_by_id.each_value.any? do |existing|
         existing.product_id == line.product_id
       end
 
       if duplicate_product
-        raise ArgumentError, 'product already exists in this order'
+        raise ValidationError, 'product already exists in this order'
       end
 
       @lines_by_id[line.id] = line
@@ -73,12 +74,12 @@ module Procurement
     def record_receipt(receipt)
       raise InvalidStateError, 'order must be confirmed to receive goods' unless @status == :confirmed
 
-      raise ArgumentError, 'receipt must be a GoodsReceipt' unless receipt.is_a?(GoodsReceipt)
+      raise ValidationError, 'receipt must be a GoodsReceipt' unless receipt.is_a?(GoodsReceipt)
 
-      raise ArgumentError, 'receipt belongs to a different order' unless receipt.purchase_order_id == @id
+      raise ValidationError, 'receipt belongs to a different order' unless receipt.purchase_order_id == @id
 
       if @receipts.any? { |existing| existing.id == receipt.id }
-        raise ArgumentError, 'receipt has already been recorded'
+        raise ValidationError, 'receipt has already been recorded'
       end
 
       receipt.lines.each do |receipt_line|
@@ -87,7 +88,7 @@ module Procurement
         )
 
         if receipt_line.received_quantity > outstanding
-          raise ArgumentError, 'received quantity exceeds outstanding quantity'
+          raise ValidationError, 'received quantity exceeds outstanding quantity'
         end
       end
 
@@ -99,7 +100,7 @@ module Procurement
 
     def find_line!(order_line_id)
       @lines_by_id.fetch(order_line_id) do
-        raise ArgumentError, 'order line does not exist'
+        raise ValidationError, 'order line does not exist'
       end
     end
 
@@ -110,11 +111,11 @@ module Procurement
     end
 
     def validated_text(value, field)
-      raise ArgumentError, "#{field} must be a String" unless value.is_a?(String)
+      raise ValidationError, "#{field} must be a String" unless value.is_a?(String)
 
       normalized = value.strip
 
-      raise ArgumentError, "#{field} must not be blank" if normalized.empty?
+      raise ValidationError, "#{field} must not be blank" if normalized.empty?
 
       normalized.freeze
     end
