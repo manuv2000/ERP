@@ -7,4 +7,6 @@ gem 'minitest', group: :test
 gem 'rubocop', group: :development, require: false
 gem "sqlite3", "~> 2.0"
 gem "graphql", "~> 2.0"
+gem "rack", "~> 3.0"
+gem "puma", "~> 7.0"
 # gem "rails"

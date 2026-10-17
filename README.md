@@ -89,3 +89,58 @@ Run the query demonstrations:
 Order reconstruction uses a read transaction, or reuses the transaction
 of the operation calling it. Separate root lookups do not share a
 request-wide database snapshot.
+
+## Local GraphQL API
+
+The application exposes a GraphQL endpoint at:
+
+http://127.0.0.1:9292/graphql
+
+Initialize the demonstration database before the first use:
+
+```bash
+bundle exec ruby cli.rb init
+```
+
+Start the local server:
+
+```bash
+bundle exec puma -b tcp://127.0.0.1:9292 config.ru
+```
+
+Keep that terminal open. Send requests from another terminal:
+
+```bash
+curl -sS http://127.0.0.1:9292/graphql \
+  -H 'Content-Type: application/json' \
+  --data-binary '{"query":"{ product(id: \"product-001\") { id sku name } }'
+```
+
+The endpoint accepts POST requests containing a JSON GraphQL request.
+There is currently no homepage or browser-based query editor.
+
+Supported operations include product and purchase-order queries,
+purchase-order confirmation, and recording goods receipts.
+
+Business rejections are returned in mutation payloads through the
+`errors` field. Clients must inspect the response body even when
+the HTTP status is 200.
+
+The HTTP application opens a database connection for each request.
+The CLI and API share the same SQLite database.
+
+### Tests
+
+```bash
+bundle exec ruby -Itest test/all_tests.rb
+```
+
+The HTTP receipt integration test uses an isolated temporary SQLite
+database. It verifies successful receipt persistence and rejection
+of a repeated receipt without changing saved quantities.
+
+### Current scope
+
+This is a local development application without authentication.
+Goods receipts track deliveries against purchase orders; warehouse
+stock movements and accounting integration are not implemented yet.
