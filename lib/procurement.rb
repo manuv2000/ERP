@@ -6,3 +6,4 @@ require_relative 'procurement/goods_receipt_line'
 require_relative 'procurement/goods_receipt'
 require_relative 'procurement/purchase_order'
 require_relative "procurement/errors"
+require_relative "procurement/stock_movement"
