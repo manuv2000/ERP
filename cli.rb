@@ -13,6 +13,7 @@ module Procurement
         bundle exec ruby cli.rb create-order ORDER_ID QUANTITY
         bundle exec ruby cli.rb receive ORDER_ID RECEIPT_ID QUANTITY
         bundle exec ruby cli.rb show ORDER_ID
+        bundle exec ruby cli.rb confirm ORDER_ID
 
       Demo product: product-001 / KEY-001 / USB keyboard
       Demo supplier reference: supplier-001
