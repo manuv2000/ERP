@@ -2,14 +2,12 @@
 
 require "sqlite3"
 require_relative "../../procurement"
-require_relative "sqlite_stock_movement_repository"
 
 module Procurement
   module Persistence
     class SQLitePurchaseOrderRepository
       def initialize(database)
         @database = database
-        @stock_movements = SQLiteStockMovementRepository.new(database)
       end
 
       def add(order)
@@ -60,81 +58,34 @@ module Procurement
         order
       end
 
-      def record_receipt(order_id, receipt)
-        updated_order = nil
-
-        @database.transaction(:immediate) do
-          updated_order = find(order_id)
-
-          unless updated_order
-            raise OrderNotFoundError, "order does not exist"
-          end
-
-          unless receipt.is_a?(GoodsReceipt)
-            raise ValidationError, "receipt must be a GoodsReceipt"
-          end
-
-          unless receipt.purchase_order_id == updated_order.id
-            raise ValidationError, "receipt belongs to a different order"
-          end
-
-          existing_receipt = updated_order.receipts.find do |stored_receipt|
-            stored_receipt.id == receipt.id
-          end
-
-          if existing_receipt
-            unless existing_receipt.same_contents_as?(receipt)
-              raise ReceiptConflictError,
-                    "receipt id already exists with different contents"
-            end
-
-            next
-          end
-
-          updated_order.record_receipt(receipt)
-
-          order_lines_by_id = updated_order.lines.to_h do |order_line|
-            [order_line.id, order_line]
-          end
-
-          @database.execute(
-            "INSERT INTO goods_receipts (purchase_order_id, id)
-            VALUES (?, ?)",
-            [updated_order.id, receipt.id]
-          )
-
-          receipt.lines.each_with_index do |line, position|
-            @database.execute(
-              "INSERT INTO goods_receipt_lines
-                (purchase_order_id, receipt_id, purchase_order_line_id,
-                  received_quantity, position)
-              VALUES (?, ?, ?, ?, ?)",
-              [
-                updated_order.id,
-                receipt.id,
-                line.purchase_order_line_id,
-                line.received_quantity,
-                position
-              ]
-            )
-
-            order_line = order_lines_by_id.fetch(
-              line.purchase_order_line_id
-            )
-
-            @stock_movements.add(
-              StockMovement.new(
-                product_id: order_line.product_id,
-                quantity: line.received_quantity,
-                purchase_order_id: updated_order.id,
-                receipt_id: receipt.id,
-                purchase_order_line_id: order_line.id
-              )
-            )
-          end
+      def insert_receipt(receipt)
+        unless @database.transaction_active?
+          raise "Receipt insertion requires an active transaction"
         end
 
-        updated_order
+        @database.execute(
+          "INSERT INTO goods_receipts (purchase_order_id, id)
+          VALUES (?, ?)",
+          [receipt.purchase_order_id, receipt.id]
+        )
+
+        receipt.lines.each_with_index do |line, position|
+          @database.execute(
+            "INSERT INTO goods_receipt_lines
+              (purchase_order_id, receipt_id, purchase_order_line_id,
+                received_quantity, position)
+            VALUES (?, ?, ?, ?, ?)",
+            [
+              receipt.purchase_order_id,
+              receipt.id,
+              line.purchase_order_line_id,
+              line.received_quantity,
+              position
+            ]
+          )
+        end
+
+        receipt
       end
       
       def confirm(order_id)

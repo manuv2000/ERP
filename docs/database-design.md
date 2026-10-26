@@ -184,6 +184,37 @@ Example failure:
 
 Previously committed products remain. Rollback affects database changes made in this transaction, not unrelated rows or arbitrary Ruby object mutations.
 
+### Application service and transaction boundary
+
+`Application::ReceiveGoods` coordinates the goods-receiving workflow.
+It receives a purchase-order repository, a stock-movement repository,
+and a callable transaction dependency.
+
+The SQLite wiring supplies both repositories with the same database
+connection. The transaction callable starts an immediate transaction
+before the service loads the order and checks for an existing receipt.
+
+For a new receipt, the service:
+
+1. Applies the purchase order's receiving rules.
+2. Inserts the receipt header and lines.
+3. Creates stock movements from the corresponding order lines.
+
+If any write fails, the database transaction rolls back all writes
+performed by that operation.
+
+`SQLitePurchaseOrderRepository#insert_receipt` requires an active
+transaction. It performs receipt persistence; the application service
+coordinates validation and inventory updates.
+
+The domain method `PurchaseOrder#record_receipt` remains responsible
+for business validation and updating the in-memory order. It does not
+write to the database.
+
+Database rollback does not undo changes to Ruby objects already in
+memory. Rollback tests therefore reload persisted state before checking
+the result.
+
 ## 8. Reconstructing an order
 
 `find` performs these operations:

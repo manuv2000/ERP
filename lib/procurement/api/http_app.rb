@@ -8,6 +8,8 @@ require_relative "schema"
 require_relative "../persistence/database"
 require_relative "../persistence/sqlite_product_repository"
 require_relative "../persistence/sqlite_purchase_order_repository"
+require_relative "../persistence/sqlite_stock_movement_repository"
+require_relative "../application/receive_goods"
 
 module Procurement
   module API
@@ -90,6 +92,17 @@ module Procurement
         Persistence::Database.open(@database_path) do |database|
           products = Persistence::SQLiteProductRepository.new(database)
           orders = Persistence::SQLitePurchaseOrderRepository.new(database)
+          stock_movements =Persistence::SQLiteStockMovementRepository.new(database)
+          
+          transaction = lambda do |&operation|
+            database.transaction(:immediate, &operation)
+          end
+
+          receive_goods = Application::ReceiveGoods.new(
+            orders: orders,
+            stock_movements: stock_movements,
+            transaction: transaction
+          )
 
           Schema.execute(
             payload.fetch("query"),
@@ -97,7 +110,9 @@ module Procurement
             operation_name: payload["operationName"],
             context: {
               products: products,
-              orders: orders
+              orders: orders,
+              stock_movements: stock_movements,
+              receive_goods: receive_goods
             }
           ).to_h
         end

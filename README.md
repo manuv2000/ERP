@@ -144,3 +144,27 @@ of a repeated receipt without changing saved quantities.
 This is a local development application without authentication.
 Goods receipts track deliveries against purchase orders; warehouse
 stock movements and accounting integration are not implemented yet.
+
+### Receiving goods
+
+Goods receiving is coordinated by
+`Procurement::Application::ReceiveGoods`, which is shared by the CLI
+and GraphQL mutation.
+
+The service loads the purchase order, checks for a previously recorded
+receipt, applies domain validation, and persists the receipt and its
+stock movements within one database transaction.
+
+Receipt IDs are unique within a purchase order:
+
+- A new receipt ID represents a new delivery.
+- Repeating an ID with identical contents is accepted without adding
+  receipts or stock movements.
+- Repeating an ID with different contents raises `ReceiptConflictError`.
+- Receipt-line ordering does not affect content comparison.
+
+An accepted retry returns the current purchase order, including any
+deliveries recorded after the original request.
+
+Integration tests cover persistence, overdelivery prevention, retries,
+conflicting receipt reuse, and rollback after database write failures.

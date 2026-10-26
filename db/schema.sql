@@ -61,3 +61,36 @@ CREATE TABLE IF NOT EXISTS goods_receipt_lines (
   FOREIGN KEY (purchase_order_id, purchase_order_line_id)
     REFERENCES purchase_order_lines(purchase_order_id, id)
 );
+
+CREATE TABLE IF NOT EXISTS stock_movements (
+  purchase_order_id TEXT NOT NULL,
+  receipt_id TEXT NOT NULL,
+  purchase_order_line_id TEXT NOT NULL,
+  product_id TEXT NOT NULL,
+  quantity INTEGER NOT NULL
+    CHECK (
+      typeof(quantity) = 'integer'
+      AND quantity > 0
+    ),
+
+  PRIMARY KEY (
+    purchase_order_id,
+    receipt_id,
+    purchase_order_line_id
+  ),
+
+  FOREIGN KEY (
+    purchase_order_id,
+    receipt_id,
+    purchase_order_line_id
+  ) REFERENCES goods_receipt_lines (
+    purchase_order_id,
+    receipt_id,
+    purchase_order_line_id
+  ),
+
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE INDEX IF NOT EXISTS stock_movements_product_id_idx
+  ON stock_movements(product_id);

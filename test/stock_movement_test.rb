@@ -13,7 +13,7 @@ class StockMovementTest < Minitest::Test
   end
 
   def test_normalizes_identifiers_without_modifying_the_input
-    original = " product-001 "
+    original = String.new(" product-001 ")
     movement = build_movement(product_id: original)
 
     assert_equal "product-001", movement.product_id

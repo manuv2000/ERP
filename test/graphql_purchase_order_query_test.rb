@@ -4,6 +4,8 @@ require "minitest/autorun"
 require_relative "../lib/procurement/api/schema"
 require_relative "../lib/procurement/persistence/sqlite_product_repository"
 require_relative "../lib/procurement/persistence/sqlite_purchase_order_repository"
+require_relative "../lib/procurement/application/receive_goods"
+require_relative "../lib/procurement/persistence/sqlite_stock_movement_repository"
 
 class GraphQLPurchaseOrderQueryTest < Minitest::Test
   QUERY = <<~GRAPHQL
@@ -36,7 +38,20 @@ class GraphQLPurchaseOrderQueryTest < Minitest::Test
 
     @orders =
       Procurement::Persistence::SQLitePurchaseOrderRepository.new(@database)
+    
+    stock_movements =
+      Procurement::Persistence::SQLiteStockMovementRepository.new(@database)
 
+    transaction = lambda do |&operation|
+      @database.transaction(:immediate, &operation)
+    end
+
+    @receive_goods = Procurement::Application::ReceiveGoods.new(
+      orders: @orders,
+      stock_movements: stock_movements,
+      transaction: transaction
+    )
+    
     @products.add(
       Procurement::Product.new(
         id: "product-001",
@@ -193,6 +208,6 @@ class GraphQLPurchaseOrderQueryTest < Minitest::Test
       ]
     )
 
-    @orders.record_receipt(id, receipt)
+    @receive_goods.call(order_id: id, receipt: receipt)
   end
 end

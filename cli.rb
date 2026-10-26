@@ -4,6 +4,8 @@ require_relative "lib/procurement"
 require_relative "lib/procurement/persistence/database"
 require_relative "lib/procurement/persistence/sqlite_product_repository"
 require_relative "lib/procurement/persistence/sqlite_purchase_order_repository"
+require_relative "lib/procurement/application/receive_goods"
+require_relative "lib/procurement/persistence/sqlite_stock_movement_repository"
 
 module Procurement
   class DemoCLI
@@ -25,6 +27,19 @@ module Procurement
 
       @products = Persistence::SQLiteProductRepository.new(database)
       @orders = Persistence::SQLitePurchaseOrderRepository.new(database)
+
+      stock_movements =
+        Persistence::SQLiteStockMovementRepository.new(database)
+
+      transaction = lambda do |&operation|
+        database.transaction(:immediate, &operation)
+      end
+
+      @receive_goods = Application::ReceiveGoods.new(
+        orders: @orders,
+        stock_movements: stock_movements,
+        transaction: transaction
+      )
     end
 
     def run(arguments)
@@ -123,7 +138,10 @@ module Procurement
         ]
       )
 
-      order = @orders.record_receipt(order_id, receipt)
+      order = @receive_goods.call(
+        order_id: receipt.purchase_order_id,
+        receipt: receipt
+      )
 
       puts "Recorded receipt #{receipt.id} for order #{order.id}."
       display_order(order)

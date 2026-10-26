@@ -39,9 +39,9 @@ module Procurement
           lines: lines
         )
 
-        order = context[:orders].record_receipt(
-          receipt.purchase_order_id,
-          receipt
+        order = context.fetch(:receive_goods).call(
+          order_id: receipt.purchase_order_id,
+          receipt: receipt
         )
 
         { order: order, errors: [] }

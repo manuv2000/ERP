@@ -4,6 +4,8 @@ require "minitest/autorun"
 require_relative "../lib/procurement/api/schema"
 require_relative "../lib/procurement/persistence/sqlite_product_repository"
 require_relative "../lib/procurement/persistence/sqlite_purchase_order_repository"
+require_relative "../lib/procurement/application/receive_goods"
+require_relative "../lib/procurement/persistence/sqlite_stock_movement_repository"
 
 class GraphQLRecordGoodsReceiptTest < Minitest::Test
   MUTATION = <<~GRAPHQL
@@ -43,6 +45,19 @@ class GraphQLRecordGoodsReceiptTest < Minitest::Test
 
     @orders =
       Procurement::Persistence::SQLitePurchaseOrderRepository.new(@database)
+
+    stock_movements =
+      Procurement::Persistence::SQLiteStockMovementRepository.new(@database)
+
+    transaction = lambda do |&operation|
+      @database.transaction(:immediate, &operation)
+    end
+
+    @receive_goods = Procurement::Application::ReceiveGoods.new(
+      orders: @orders,
+      stock_movements: stock_movements,
+      transaction: transaction
+    )
 
     order = Procurement::PurchaseOrder.new(
       id: "order-001",
@@ -235,11 +250,11 @@ class GraphQLRecordGoodsReceiptTest < Minitest::Test
     assert_equal 3, loaded.received_quantity_for("mouse-line")
   end
 
-  def test_does_not_hide_unexpected_repository_errors
-    broken_repository = Object.new
+  def test_does_not_hide_unexpected_service_errors
+    broken_service = Object.new
 
-    def broken_repository.record_receipt(_order_id, _receipt)
-      raise ArgumentError, "unexpected repository bug"
+    def broken_service.call(order_id:, receipt:)
+      raise ArgumentError, "unexpected service bug"
     end
 
     error = assert_raises(ArgumentError) do
@@ -252,11 +267,11 @@ class GraphQLRecordGoodsReceiptTest < Minitest::Test
             "lines" => [input_line(quantity: 3)]
           }
         },
-        context: { orders: broken_repository }
+        context: { receive_goods: broken_service }
       )
     end
 
-    assert_equal "unexpected repository bug", error.message
+    assert_equal "unexpected service bug", error.message
   end
   
   private
@@ -275,7 +290,10 @@ class GraphQLRecordGoodsReceiptTest < Minitest::Test
           "lines" => lines
         }
       },
-      context: { orders: @orders }
+      context: {
+        orders: @orders,
+        receive_goods: @receive_goods
+      }
     ).to_h
 
     refute result.key?("errors"), result["errors"].inspect
