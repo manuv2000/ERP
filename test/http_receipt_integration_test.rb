@@ -36,7 +36,7 @@ class HttpReceiptIntegrationTest < Minitest::Test
     FileUtils.remove_entry(@temporary_directory) if @temporary_directory
   end
 
-  def test_records_a_receipt_once_and_rejects_a_duplicate
+  def test_records_a_receipt_once_and_accepts_an_identical_retry
     response = submit_receipt
 
     assert_equal 200, response.status
@@ -62,10 +62,10 @@ class HttpReceiptIntegrationTest < Minitest::Test
                             .fetch("data")
                             .fetch("recordGoodsReceipt")
 
-    assert_nil duplicate_payload.fetch("order")
+    assert_empty duplicate_payload.fetch("errors")
     assert_equal(
-      ["receipt has already been recorded"],
-      duplicate_payload.fetch("errors")
+      "order-http-test",
+      duplicate_payload.fetch("order").fetch("id")
     )
 
     unchanged_order = reload_order
@@ -73,6 +73,76 @@ class HttpReceiptIntegrationTest < Minitest::Test
     assert_equal 6, unchanged_order.received_quantity_for("line-001")
     assert_equal 4, unchanged_order.outstanding_quantity_for("line-001")
     assert_equal 1, unchanged_order.receipts.size
+  end
+
+  def test_product_query_reports_stock_after_receiving_goods
+    receipt_response = submit_receipt
+
+    assert_equal 200, receipt_response.status
+
+    receipt_payload = JSON.parse(receipt_response.body)
+                          .fetch("data")
+                          .fetch("recordGoodsReceipt")
+
+    assert_empty receipt_payload.fetch("errors")
+
+    query = <<~GRAPHQL
+      query ProductStock($id: ID!) {
+        product(id: $id) {
+          id
+          quantityOnHand
+        }
+      }
+    GRAPHQL
+
+    response = @request.post(
+      "/graphql",
+      "CONTENT_TYPE" => "application/json",
+      input: JSON.generate(
+        query: query,
+        variables: { id: "product-001" }
+      )
+    )
+
+    assert_equal 200, response.status
+
+    result = JSON.parse(response.body)
+
+    refute result.key?("errors"), result.inspect
+
+    product = result.fetch("data").fetch("product")
+
+    assert_equal "product-001", product.fetch("id")
+    assert_equal 6, product.fetch("quantityOnHand")
+  end
+
+  def test_product_query_reports_zero_before_any_receipts
+    response = @request.post(
+      "/graphql",
+      "CONTENT_TYPE" => "application/json",
+      input: JSON.generate(
+        query: <<~GRAPHQL
+          {
+            product(id: "product-001") {
+              quantityOnHand
+            }
+          }
+        GRAPHQL
+      )
+    )
+
+    assert_equal 200, response.status
+
+    result = JSON.parse(response.body)
+
+    refute result.key?("errors"), result.inspect
+
+    assert_equal(
+      0,
+      result.fetch("data")
+            .fetch("product")
+            .fetch("quantityOnHand")
+    )
   end
 
   private

@@ -136,19 +136,33 @@ class GraphQLRecordGoodsReceiptTest < Minitest::Test
     assert_equal [], @orders.find("order-001").receipts
   end
 
-  def test_rejects_duplicate_receipt_recording
+  def test_accepts_an_identical_receipt_retry
     receive(lines: [input_line(quantity: 3)])
     payload = receive(lines: [input_line(quantity: 3)])
 
+    assert_empty payload.fetch("errors")
+    refute_nil payload.fetch("order")
+
+    loaded = @orders.find("order-001")
+
+    assert_equal 1, loaded.receipts.size
+    assert_equal 3, loaded.received_quantity_for("line-001")
+  end
+
+  def test_reports_conflicting_receipt_contents
+    receive(lines: [input_line(quantity: 3)])
+    payload = receive(lines: [input_line(quantity: 4)])
+
     assert_nil payload.fetch("order")
     assert_equal(
-      ["receipt has already been recorded"],
+      ["receipt id already exists with different contents"],
       payload.fetch("errors")
     )
 
-    loaded = @orders.find("order-001")
-    assert_equal 1, loaded.receipts.size
-    assert_equal 3, loaded.received_quantity_for("line-001")
+    assert_equal(
+      3,
+      @orders.find("order-001").received_quantity_for("line-001")
+    )
   end
 
   def test_records_multiple_lines_in_one_receipt

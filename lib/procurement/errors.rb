@@ -5,4 +5,7 @@ module Procurement
 
   class ValidationError < ArgumentError
   end
+
+  class ReceiptConflictError < ValidationError
+  end
 end

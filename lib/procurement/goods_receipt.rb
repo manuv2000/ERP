@@ -29,6 +29,21 @@ module Procurement
       freeze
     end
 
+    def same_contents_as?(other)
+      return false unless other.is_a?(GoodsReceipt)
+      return false unless purchase_order_id == other.purchase_order_id
+
+      quantities_by_line = lines.to_h do |line|
+        [line.purchase_order_line_id, line.received_quantity]
+      end
+
+      other_quantities_by_line = other.lines.to_h do |line|
+        [line.purchase_order_line_id, line.received_quantity]
+      end
+
+      quantities_by_line == other_quantities_by_line
+    end
+
     private
 
     def validated_text(value, field)
